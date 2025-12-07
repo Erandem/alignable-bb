@@ -154,7 +154,9 @@ impl<'a, const N: usize> BitReader<'a, N> {
         let data = self.buffer.get_buf();
         let bit = (data[byte_idx] >> bit_idx) & 1;
 
-        self.buffer.read_pos.store((read_pos + 1) % (N * 8), Ordering::Release);
+        self.buffer
+            .read_pos
+            .store((read_pos + 1) % (N * 8), Ordering::Release);
 
         Some(bit != 0)
     }
@@ -185,7 +187,7 @@ impl<'a, const N: usize> BitReader<'a, N> {
     }
 
     /// Attemps to read a byte.
-    /// 
+    ///
     /// This is more efficient if [`BitBuffer::is_reader_aligned`] is true
     pub fn read_byte(&mut self) -> Option<u8> {
         let read_pos = self.buffer.read_pos.load(Ordering::Acquire);
@@ -195,7 +197,9 @@ impl<'a, const N: usize> BitReader<'a, N> {
             let byte_idx = (read_pos / 8) % N;
             let byte = self.buffer.get_buf()[byte_idx];
 
-            self.buffer.read_pos.store((read_pos + 8) % (N * 8), Ordering::Release);
+            self.buffer
+                .read_pos
+                .store((read_pos + 8) % (N * 8), Ordering::Release);
             Some(byte)
         } else {
             self.read_bits(8)
@@ -231,10 +235,14 @@ impl<'a, const N: usize> BitReader<'a, N> {
                 buf[first_part..bytes_to_read].copy_from_slice(&data[..second_part]);
             }
 
-            self.buffer.read_pos.store((read_pos + bytes_to_read * 8) % (N * 8), Ordering::Release);
+            self.buffer
+                .read_pos
+                .store((read_pos + bytes_to_read * 8) % (N * 8), Ordering::Release);
         } else {
             for byte in buf.iter_mut() {
-                *byte = self.read_byte().expect("Failed to get byte when we already checked the length!");
+                *byte = self
+                    .read_byte()
+                    .expect("Failed to get byte when we already checked the length!");
             }
         }
 
@@ -249,15 +257,15 @@ impl<'a, const N: usize> BitReader<'a, N> {
 
     /// Hint to the internal structure that we will be doing a lot of reading, and
     /// therefore would like the reader to be aligned.
-    /// 
+    ///
     /// This will be unable to align if the writer is currently pointing at the same
-    /// beginning bit as the reader. 
-    /// 
+    /// beginning bit as the reader.
+    ///
     /// This function is intended to optimize parsing when the input data is not all
     /// available at once. For example, reading data from an input stream, we can
     /// align the data early on to make the writes be aligned to the reader, making
     /// it possible to read entire bytes at once.
-    /// 
+    ///
     /// # Returns
     /// The function will return whether the data is aligned or not
     pub fn hint_align(&mut self) -> bool {
@@ -310,6 +318,35 @@ impl<'a, const N: usize> BitWriter<'a, N> {
         Some(())
     }
 
+    /// Writes the specified number of bits from the provided byte, starting with the LSB
+    ///
+    /// # Example
+    /// ```rust
+    /// # use alignable_bb::BitBuffer;
+    /// let buffer = BitBuffer::<2>::new();
+    /// let (mut reader, mut writer) = buffer.try_split().unwrap();
+    ///
+    /// writer.write_bits(0b101, 3);
+    ///
+    /// assert_eq!(reader.read_bits(3), Some(0b101));
+    /// # assert_eq!(reader.read_bit(), None);
+    /// ```
+    pub fn write_bits(&mut self, byte: u8, bits: u8) -> Option<()> {
+        assert!(bits <= 8, "a byte can only hold 8 bits");
+
+        // Error if we are unable to return the requested number of bits
+        if self.buffer.available_write_bits() < bits as usize {
+            return None;
+        }
+
+        for i in 0..bits {
+            let value = ((byte >> i) & 1) != 0;
+            self.write_bit(value);
+        }
+
+        Some(())
+    }
+
     /// Writes a byte, LSB-first
     pub fn write_byte(&mut self, byte: u8) -> Option<()> {
         if self.buffer.available_write_bits() < 8 {
@@ -318,7 +355,8 @@ impl<'a, const N: usize> BitWriter<'a, N> {
 
         for i in 0..8 {
             // We know that we are able to write 8 bits, and there is only one writer, so a race condition should not be possible.
-            self.write_bit((byte >> i) & 1 != 0).expect("Race condition occured, unable to write byte!");
+            self.write_bit((byte >> i) & 1 != 0)
+                .expect("Race condition occured, unable to write byte!");
         }
 
         Some(())
@@ -330,8 +368,9 @@ impl<'a, const N: usize> BitWriter<'a, N> {
         }
 
         for &byte in bytes {
-            self.write_byte(byte).expect("Failed to write byte when we already checked for available size!");
-        };
+            self.write_byte(byte)
+                .expect("Failed to write byte when we already checked for available size!");
+        }
 
         Some(())
     }
