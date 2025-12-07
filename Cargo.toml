@@ -1,0 +1,14 @@
+[package]
+name = "alignable-bitbuffer"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+portable-atomic = "1.11"
+
+[dev-dependencies]
+criterion = { version = "0.7" }
+
+[[bench]]
+name = "bb-bench"
+harness = false
