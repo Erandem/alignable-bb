@@ -278,6 +278,10 @@ impl<'a, const N: usize> BitRead for BitReader<'a, N> {
 
         self.read_bytes(&mut array).map(|_| array)
     }
+
+    fn available_read_bits(&self) -> usize {
+        self.buffer.available_read_bits()
+    }
 }
 
 impl<'a, const N: usize> Drop for BitReader<'a, N> {
@@ -392,6 +396,8 @@ pub trait BitRead {
     fn read_byte(&mut self) -> Option<u8>;
     fn read_bytes(&mut self, buf: &mut [u8]) -> Option<()>;
     fn read_array<const M: usize>(&mut self) -> Option<[u8; M]>;
+
+    fn available_read_bits(&self) -> usize;
 }
 
 #[cfg(test)]
