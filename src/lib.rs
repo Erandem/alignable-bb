@@ -140,7 +140,31 @@ pub struct BitReader<'a, const N: usize> {
 }
 
 impl<'a, const N: usize> BitReader<'a, N> {
-    pub fn read_bit(&mut self) -> Option<bool> {
+    /// Hint to the internal structure that we will be doing a lot of reading, and
+    /// therefore would like the reader to be aligned.
+    ///
+    /// This will be unable to align if the writer is currently pointing at the same
+    /// beginning bit as the reader.
+    ///
+    /// This function is intended to optimize parsing when the input data is not all
+    /// available at once. For example, reading data from an input stream, we can
+    /// align the data early on to make the writes be aligned to the reader, making
+    /// it possible to read entire bytes at once.
+    ///
+    /// # Returns
+    /// The function will return whether the data is aligned or not
+    pub fn hint_align(&mut self) -> bool {
+        if self.buffer.is_reader_aligned() {
+            return true;
+        }
+
+        // TODO Implement hint_align
+        return false;
+    }
+}
+
+impl<'a, const N: usize> BitRead for BitReader<'a, N> {
+    fn read_bit(&mut self) -> Option<bool> {
         let read_pos = self.buffer.read_pos.load(Ordering::Acquire);
         let write_pos = self.buffer.write_pos.load(Ordering::Acquire);
 
@@ -161,7 +185,7 @@ impl<'a, const N: usize> BitReader<'a, N> {
         Some(bit != 0)
     }
 
-    pub fn read_bits(&mut self, num_bits: u8) -> Option<u8> {
+    fn read_bits(&mut self, num_bits: u8) -> Option<u8> {
         // TODO Add a fast-path when `num_bits` is 8
         if num_bits > 8 {
             panic!("Number of bits to be read is greater than 8");
@@ -189,7 +213,7 @@ impl<'a, const N: usize> BitReader<'a, N> {
     /// Attemps to read a byte.
     ///
     /// This is more efficient if [`BitBuffer::is_reader_aligned`] is true
-    pub fn read_byte(&mut self) -> Option<u8> {
+    fn read_byte(&mut self) -> Option<u8> {
         let read_pos = self.buffer.read_pos.load(Ordering::Acquire);
 
         // Fast path: The code is aligned, therefore we do not need to iterate 8 bits
@@ -206,7 +230,7 @@ impl<'a, const N: usize> BitReader<'a, N> {
         }
     }
 
-    pub fn read_bytes(&mut self, buf: &mut [u8]) -> Option<()> {
+    fn read_bytes(&mut self, buf: &mut [u8]) -> Option<()> {
         if self.buffer.available_read_bits() < buf.len() * 8 {
             return None;
         }
@@ -249,32 +273,10 @@ impl<'a, const N: usize> BitReader<'a, N> {
         Some(())
     }
 
-    pub fn read_array<const M: usize>(&mut self) -> Option<[u8; M]> {
+    fn read_array<const M: usize>(&mut self) -> Option<[u8; M]> {
         let mut array = [0u8; M];
 
         self.read_bytes(&mut array).map(|_| array)
-    }
-
-    /// Hint to the internal structure that we will be doing a lot of reading, and
-    /// therefore would like the reader to be aligned.
-    ///
-    /// This will be unable to align if the writer is currently pointing at the same
-    /// beginning bit as the reader.
-    ///
-    /// This function is intended to optimize parsing when the input data is not all
-    /// available at once. For example, reading data from an input stream, we can
-    /// align the data early on to make the writes be aligned to the reader, making
-    /// it possible to read entire bytes at once.
-    ///
-    /// # Returns
-    /// The function will return whether the data is aligned or not
-    pub fn hint_align(&mut self) -> bool {
-        if self.buffer.is_reader_aligned() {
-            return true;
-        }
-
-        // TODO Implement hint_align
-        return false;
     }
 }
 
@@ -382,6 +384,14 @@ impl<'a, const N: usize> Drop for BitWriter<'a, N> {
             .handle_flags
             .and(!WRITER_TAKEN, Ordering::Release);
     }
+}
+
+pub trait BitRead {
+    fn read_bit(&mut self) -> Option<bool>;
+    fn read_bits(&mut self, bit_count: u8) -> Option<u8>;
+    fn read_byte(&mut self) -> Option<u8>;
+    fn read_bytes(&mut self, buf: &mut [u8]) -> Option<()>;
+    fn read_array<const M: usize>(&mut self) -> Option<[u8; M]>;
 }
 
 #[cfg(test)]
