@@ -282,6 +282,10 @@ impl<'a, const N: usize> BitRead for BitReader<'a, N> {
     fn available_read_bits(&self) -> usize {
         self.buffer.available_read_bits()
     }
+
+    fn hint_align_reader(&mut self) -> bool {
+        self.buffer.is_reader_aligned()
+    }
 }
 
 impl<'a, const N: usize> Drop for BitReader<'a, N> {
@@ -398,6 +402,10 @@ pub trait BitRead {
     fn read_array<const M: usize>(&mut self) -> Option<[u8; M]>;
 
     fn available_read_bits(&self) -> usize;
+
+    /// Hints to the reader that it can be aligned - this function is not required to do anything.
+    /// It should return whether the array is aligned or not.
+    fn hint_align_reader(&mut self) -> bool;
 }
 
 #[cfg(test)]
