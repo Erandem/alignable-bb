@@ -1,6 +1,6 @@
 use std::hint::black_box;
 
-use alignable_bitbuffer::BitBuffer;
+use alignable_bb::{BitBuffer, BitRead};
 use criterion::{Criterion, criterion_group, criterion_main};
 
 fn bench_write_bits(c: &mut Criterion) {
