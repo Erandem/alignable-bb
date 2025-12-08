@@ -279,7 +279,7 @@ impl<'a, const N: usize> BitRead for BitReader<'a, N> {
         self.read_bytes(&mut array).map(|_| array)
     }
 
-    fn peak_bit(&self) -> Option<bool> {
+    fn peek_bit(&self) -> Option<bool> {
         let read_pos = self.buffer.read_pos.load(Ordering::Acquire);
         let write_pos = self.buffer.write_pos.load(Ordering::Acquire);
 
@@ -420,7 +420,7 @@ pub trait BitRead {
 
     /// Attempts to peak the next bit.
     /// This will return None if there is no pending bits to be read
-    fn peak_bit(&self) -> Option<bool>;
+    fn peek_bit(&self) -> Option<bool>;
 
     fn available_read_bits(&self) -> usize;
 
