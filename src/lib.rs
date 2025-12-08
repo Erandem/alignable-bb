@@ -279,6 +279,23 @@ impl<'a, const N: usize> BitRead for BitReader<'a, N> {
         self.read_bytes(&mut array).map(|_| array)
     }
 
+    fn peak_bit(&self) -> Option<bool> {
+        let read_pos = self.buffer.read_pos.load(Ordering::Acquire);
+        let write_pos = self.buffer.write_pos.load(Ordering::Acquire);
+
+        if read_pos == write_pos {
+            return None;
+        }
+
+        let byte_idx = (read_pos / 8) % N;
+        let bit_idx = read_pos % 8;
+
+        let data = self.buffer.get_buf();
+        let bit = (data[byte_idx] >> bit_idx) & 1;
+
+        Some(bit != 0)
+    }
+
     fn available_read_bits(&self) -> usize {
         self.buffer.available_read_bits()
     }
@@ -400,6 +417,10 @@ pub trait BitRead {
     fn read_byte(&mut self) -> Option<u8>;
     fn read_bytes(&mut self, buf: &mut [u8]) -> Option<()>;
     fn read_array<const M: usize>(&mut self) -> Option<[u8; M]>;
+
+    /// Attempts to peak the next bit.
+    /// This will return None if there is no pending bits to be read
+    fn peak_bit(&self) -> Option<bool>;
 
     fn available_read_bits(&self) -> usize;
 
