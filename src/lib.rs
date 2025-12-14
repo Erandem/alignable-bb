@@ -317,8 +317,8 @@ pub struct BitWriter<'a, const N: usize> {
     buffer: &'a BitBuffer<N>,
 }
 
-impl<'a, const N: usize> BitWriter<'a, N> {
-    pub fn write_bit(&mut self, bit: bool) -> Option<()> {
+impl<'a, const N: usize> BitWrite for BitWriter<'a, N> {
+    fn write_bit(&mut self, bit: bool) -> Option<()> {
         if self.buffer.is_full() {
             return None;
         }
@@ -358,7 +358,7 @@ impl<'a, const N: usize> BitWriter<'a, N> {
     /// assert_eq!(reader.read_bits(3), Some(0b101));
     /// # assert_eq!(reader.read_bit(), None);
     /// ```
-    pub fn write_bits(&mut self, byte: u8, bits: u8) -> Option<()> {
+    fn write_bits(&mut self, byte: u8, bits: u8) -> Option<()> {
         assert!(bits <= 8, "a byte can only hold 8 bits");
 
         // Error if we are unable to return the requested number of bits
@@ -375,7 +375,7 @@ impl<'a, const N: usize> BitWriter<'a, N> {
     }
 
     /// Writes a byte, LSB-first
-    pub fn write_byte(&mut self, byte: u8) -> Option<()> {
+    fn write_byte(&mut self, byte: u8) -> Option<()> {
         if self.buffer.available_write_bits() < 8 {
             return None;
         }
@@ -389,7 +389,7 @@ impl<'a, const N: usize> BitWriter<'a, N> {
         Some(())
     }
 
-    pub fn write_bytes(&mut self, bytes: &[u8]) -> Option<()> {
+    fn write_bytes(&mut self, bytes: &[u8]) -> Option<()> {
         if self.buffer.available_write_bits() < 8 * bytes.len() {
             return None;
         }
@@ -427,6 +427,13 @@ pub trait BitRead {
     /// Hints to the reader that it can be aligned - this function is not required to do anything.
     /// It should return whether the array is aligned or not.
     fn hint_align_reader(&mut self) -> bool;
+}
+
+pub trait BitWrite {
+    fn write_bit(&mut self, bit: bool) -> Option<()>;
+    fn write_bits(&mut self, byte: u8, bits: u8) -> Option<()>;
+    fn write_byte(&mut self, byte: u8) -> Option<()>;
+    fn write_bytes(&mut self, bytes: &[u8]) -> Option<()>;
 }
 
 #[cfg(test)]
