@@ -135,6 +135,10 @@ impl<const N: usize> BitBuffer<N> {
     }
 }
 
+unsafe impl<const N: usize> Send for BitBuffer<N> {}
+
+unsafe impl<const N: usize> Sync for BitBuffer<N> {}
+
 pub struct BitReader<'a, const N: usize> {
     buffer: &'a BitBuffer<N>,
 }
@@ -349,7 +353,7 @@ impl<'a, const N: usize> BitWrite for BitWriter<'a, N> {
     ///
     /// # Example
     /// ```rust
-    /// # use alignable_bb::BitBuffer;
+    /// # use alignable_bb::{BitBuffer, BitWrite, BitRead};
     /// let buffer = BitBuffer::<2>::new();
     /// let (mut reader, mut writer) = buffer.try_split().unwrap();
     ///
