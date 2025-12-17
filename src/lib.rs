@@ -405,6 +405,10 @@ impl<'a, const N: usize> BitWrite for BitWriter<'a, N> {
 
         Some(())
     }
+
+    fn available_write_bits(&self) -> usize {
+        self.buffer.available_write_bits()
+    }
 }
 
 impl<'a, const N: usize> Drop for BitWriter<'a, N> {
@@ -438,6 +442,8 @@ pub trait BitWrite {
     fn write_bits(&mut self, byte: u8, bits: u8) -> Option<()>;
     fn write_byte(&mut self, byte: u8) -> Option<()>;
     fn write_bytes(&mut self, bytes: &[u8]) -> Option<()>;
+
+    fn available_write_bits(&self) -> usize;
 }
 
 #[cfg(test)]
